@@ -1,0 +1,7 @@
+# Node modules & build files
+node_modules/
+.env
+*.log
+
+# Python virtual environment
+venv/
