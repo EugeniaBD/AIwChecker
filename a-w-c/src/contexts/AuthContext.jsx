@@ -28,7 +28,8 @@ import {
   getDownloadURL
 } from 'firebase/storage';
 
-import firebaseApp from '../firebase/config';
+import { firebaseApp } from '../firebase/config';
+
 
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
