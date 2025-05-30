@@ -1,6 +1,9 @@
 // File: src/API/analyzeWithGPT.js
 export async function analyzeWithGPT(text) {
-  const response = await fetch('http://localhost:4000/analyze', {
+  
+  // const response = await fetch('http://localhost:4000/analyze', {
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/analyze`, {
+
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
