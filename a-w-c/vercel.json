@@ -1,0 +1,11 @@
+{
+  "projects": [
+    {
+      "name": "frontend",
+      "rootDirectory": "a-w-c",
+      "buildCommand": "npm run build",
+      "outputDirectory": "dist",
+      "installCommand": "npm install --legacy-peer-deps"
+    }
+  ]
+}
