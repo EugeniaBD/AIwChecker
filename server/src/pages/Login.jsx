@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 function Login() {
@@ -7,12 +7,28 @@ function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, signInWithGoogle } = useAuth();  // Add signInWithGoogle from context
+  const { login, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // ✅ Prefill credentials if redirected from Register
+  useEffect(() => {
+    if (location.state?.email) {
+      setEmail(location.state.email);
+    }
+    if (location.state?.password) {
+      setPassword(location.state.password);
+      // Focus the password field after setting state
+      setTimeout(() => {
+        const pwdInput = document.getElementById('password');
+        if (pwdInput) pwdInput.focus();
+      }, 100);
+    }
+  }, [location.state]);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    
+
     try {
       setError('');
       setLoading(true);
@@ -26,11 +42,10 @@ function Login() {
     }
   }
 
-  // Google Sign-In Handler
   async function handleGoogleSignIn() {
     try {
-      await signInWithGoogle();  // Authenticate with Google
-      navigate('/dashboard');  // Redirect to Dashboard after successful Google sign-in
+      await signInWithGoogle();
+      navigate('/dashboard');
     } catch (error) {
       setError('Failed to sign in with Google');
       console.error(error);
@@ -41,14 +56,15 @@ function Login() {
     <div className="flex justify-center mt-12">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md">
         <h2 className="text-2xl font-bold text-center mb-6">Log In to AIWriteCheck</h2>
-        
+
         {error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
             {error}
           </div>
         )}
-        
+
         <form onSubmit={handleSubmit}>
+          {/* Email */}
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
               Email
@@ -67,7 +83,8 @@ function Login() {
               />
             </div>
           </div>
-          
+
+          {/* Password */}
           <div className="mb-6">
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
               Password
@@ -86,7 +103,8 @@ function Login() {
               />
             </div>
           </div>
-          
+
+          {/* Remember Me / Forgot Password */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
               <input
@@ -98,12 +116,12 @@ function Login() {
                 Remember me
               </label>
             </div>
-            
             <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
               Forgot password?
             </Link>
           </div>
-          
+
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
@@ -119,7 +137,7 @@ function Login() {
           </button>
         </form>
 
-        {/* Google Sign In Button with Image */}
+        {/* Google Sign In Button */}
         <div className="mt-4 text-center">
           <button
             onClick={handleGoogleSignIn}
@@ -129,7 +147,7 @@ function Login() {
             Sign in with Google
           </button>
         </div>
-        
+
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             Don't have an account?{' '}
