@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../contexts/AuthContext';
+import { analyzeWithGPT } from '../API/analyzeWithGPT';
 
 function TextAnalysis() {
   const { currentUser } = useAuth();
@@ -29,29 +30,8 @@ function TextAnalysis() {
       setError('');
       setAnalyzing(true);
 
-      // Simulating text analysis with random results for this demo
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Example analysis results
-      const analysisResults = {
-        aiInfluence: Math.floor(Math.random() * 70),  // 0-70%
-        score: 7 + Math.random() * 3,  // 7-10
-        suggestions: [
-          { text: 'Try varying your sentence structures more', color: 'bg-yellow-500' },
-          { text: 'Consider adding more personal perspectives', color: 'bg-green-500' },
-          { text: 'Use more specific examples to illustrate your points', color: 'bg-blue-500' },
-          { text: 'Add some transitional phrases between paragraphs', color: 'bg-red-500' }
-        ],
-        strengths: [
-          { text: 'Good vocabulary usage', color: 'bg-green-500' },
-          { text: 'Clear organization of ideas', color: 'bg-blue-500' },
-          { text: 'Effective use of examples', color: 'bg-yellow-500' }
-        ],
-        readability: {
-          score: 65 + Math.floor(Math.random() * 25),  // 65-90
-          level: 'Intermediate'
-        }
-      };
+      // 🔁 Replaced mocked analysis with real API call
+      const analysisResults = await analyzeWithGPT(text);
 
       // Save to Firestore
       const submissionRef = await addDoc(collection(db, 'submissions'), {
