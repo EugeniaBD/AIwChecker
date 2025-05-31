@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut, 
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
   sendPasswordResetEmail,
   onAuthStateChanged,
   getAuth,
@@ -12,15 +12,29 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
   signInWithPopup,
-  GoogleAuthProvider
+  GoogleAuthProvider,
+  setPersistence,
+  browserLocalPersistence
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, getFirestore } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // Import Firebase Storage methods
-import firebaseApp from '../firebase/config'; // Import with a different name to avoid confusion
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  getFirestore
+} from 'firebase/firestore';
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from 'firebase/storage';
 
-// Initialize auth and db using the imported app
+import { firebaseApp } from '../firebase/config';
+
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
 
 const AuthContext = createContext();
 
@@ -34,67 +48,84 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
 
-  const storage = getStorage();
+  const uploadProfileImage = async (file) => {
+    if (!currentUser) throw new Error("User not authenticated");
 
-  // Helper function to upload image and get URL
-  const uploadProfileImage = async (file, userId) => {
-    const imageRef = ref(storage, `profileImages/${userId}/${file.name}`); // Store images under a unique user ID
+    const uid = currentUser.uid;
+    const imageRef = ref(storage, `public/users/${uid}/${file.name}`);
+    await uploadBytes(imageRef, file);
+    const imageUrl = await getDownloadURL(imageRef);
 
-    await uploadBytes(imageRef, file); // Upload the file to Firebase Storage
+    await updateDoc(doc(db, 'users', uid), {
+      profileImage: imageUrl,
+      updatedAt: new Date().toISOString()
+    });
 
-    const imageUrl = await getDownloadURL(imageRef); // Get the download URL of the uploaded image
+    await updateProfile(currentUser, { photoURL: imageUrl });
+    setUserProfile(prev => ({ ...prev, profileImage: imageUrl }));
+
+    await currentUser.reload();
+    setCurrentUser(auth.currentUser);
     return imageUrl;
   };
 
-  // Google Sign-In Method
+  async function signup(email, password, name, avatarFile = null) {
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+      let avatarUrl = null;
+
+      if (avatarFile) {
+        setCurrentUser(userCredential.user);
+        avatarUrl = await uploadProfileImage(avatarFile);
+      }
+
+      await updateProfile(userCredential.user, {
+        displayName: name,
+        photoURL: avatarUrl || undefined,
+      });
+
+      await setDoc(doc(db, 'users', uid), {
+        name,
+        email,
+        role: 'user',
+        profileImage: avatarUrl || null,
+        isActive: true,
+        createdAt: new Date().toISOString()
+      });
+
+      return userCredential;
+    } catch (error) {
+      console.error("Signup error:", error);
+      throw error;
+    }
+  }
+
   async function signInWithGoogle() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Check if the user already exists in Firestore
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        // If the user doesn't exist, create a new document
         await setDoc(userDocRef, {
-          name: user.displayName,
+          name: user.displayName || '',
           email: user.email,
-          role: 'user', // Default role for new users
-          createdAt: new Date().toISOString()
+          role: 'user',
+          profileImage: user.photoURL || null,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          plan: 'free'
         });
       }
 
-      // Return the user data
       return result;
     } catch (error) {
-      console.error("Error during Google sign-in:", error);
-      throw error;
-    }
-  }
-
-  // Sign up with email and password
-  async function signup(email, password, name) {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Update profile with name
-      await updateProfile(userCredential.user, {
-        displayName: name
-      });
-      
-      // Create user document in Firestore
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        name,
-        email,
-        role: 'user',
-        createdAt: new Date().toISOString()
-      });
-      
-      return userCredential;
-    } catch (error) {
+      console.error("Google sign-in error:", error);
       throw error;
     }
   }
@@ -111,45 +142,28 @@ export function AuthProvider({ children }) {
     return sendPasswordResetEmail(auth, email);
   }
 
-  async function getUserRole(uid) {
-    try {
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (userDoc.exists()) {
-        return userDoc.data().role;
-      }
-      return 'user';
-    } catch (error) {
-      console.error("Error getting user role:", error);
-      return 'user';
-    }
-  }
-
-  async function getUserProfile(uid) {
-    try {
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (userDoc.exists()) {
-        return userDoc.data();
-      }
-      return null;
-    } catch (error) {
-      console.error("Error getting user profile:", error);
-      return null;
-    }
-  }
-
   async function updateUserProfile(data) {
     if (!currentUser) return;
 
     try {
-      // Update the profile image (and other data if needed) in Firestore
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        ...data, // This will include the new profileImage URL
-        updatedAt: new Date().toISOString()  // Optionally, add a timestamp
+      const uid = currentUser.uid;
+
+      await updateDoc(doc(db, 'users', uid), {
+        ...data,
+        updatedAt: new Date().toISOString()
       });
 
-      // Update local user profile state
-      setUserProfile(prev => ({ ...prev, ...data }));
+      if (data.name || data.profileImage) {
+        await updateProfile(currentUser, {
+          displayName: data.name || currentUser.displayName,
+          photoURL: data.profileImage || currentUser.photoURL
+        });
+      }
 
+      await currentUser.reload();
+      const refreshedUser = auth.currentUser;
+      setCurrentUser(refreshedUser);
+      setUserProfile(prev => ({ ...prev, ...data }));
       return true;
     } catch (error) {
       console.error("Error updating user profile:", error);
@@ -161,24 +175,16 @@ export function AuthProvider({ children }) {
     if (!currentUser) throw new Error("No user logged in");
 
     try {
-      // Re-authenticate user before updating email
-      const credential = EmailAuthProvider.credential(
-        currentUser.email,
-        password
-      );
-
+      const credential = EmailAuthProvider.credential(currentUser.email, password);
       await reauthenticateWithCredential(currentUser, credential);
       await updateEmail(currentUser, newEmail);
 
-      // Update email in Firestore
       await updateDoc(doc(db, 'users', currentUser.uid), {
         email: newEmail,
         updatedAt: new Date().toISOString()
       });
 
-      // Update local user profile
       setUserProfile(prev => ({ ...prev, email: newEmail }));
-
       return true;
     } catch (error) {
       console.error("Error updating email:", error);
@@ -190,15 +196,9 @@ export function AuthProvider({ children }) {
     if (!currentUser) throw new Error("No user logged in");
 
     try {
-      // Re-authenticate user before updating password
-      const credential = EmailAuthProvider.credential(
-        currentUser.email,
-        currentPassword
-      );
-
+      const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
       await reauthenticateWithCredential(currentUser, credential);
       await updatePassword(currentUser, newPassword);
-
       return true;
     } catch (error) {
       console.error("Error updating password:", error);
@@ -206,16 +206,37 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function getUserRole(uid) {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      return userDoc.exists() ? userDoc.data().role : 'user';
+    } catch (error) {
+      console.error("Error getting user role:", error);
+      return 'user';
+    }
+  }
+
+  async function getUserProfile(uid) {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      return userDoc.exists() ? userDoc.data() : null;
+    } catch (error) {
+      console.error("Error getting user profile:", error);
+      return null;
+    }
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("🔥 Auth state changed:", user);
       setCurrentUser(user);
 
       if (user) {
-        const role = await getUserRole(user.uid);
+        const [role, profile] = await Promise.all([
+          getUserRole(user.uid),
+          getUserProfile(user.uid)
+        ]);
         setUserRole(role);
-
-        // Fetch user profile data
-        const profile = await getUserProfile(user.uid);
         setUserProfile(profile);
       } else {
         setUserRole('user');
@@ -232,14 +253,15 @@ export function AuthProvider({ children }) {
     currentUser,
     userProfile,
     isAdmin: userRole === 'admin',
-    signInWithGoogle, // Add Google Sign-In function to the context
     signup,
     login,
     logout,
     resetPassword,
+    signInWithGoogle,
     updateUserProfile,
     updateUserEmail,
-    updateUserPassword
+    updateUserPassword,
+    uploadProfileImage
   };
 
   return (
@@ -249,5 +271,4 @@ export function AuthProvider({ children }) {
   );
 }
 
-// Export db and auth for use in other components
 export { db, auth };
