@@ -12,7 +12,9 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
   signInWithPopup,
-  GoogleAuthProvider
+  GoogleAuthProvider,
+  setPersistence,
+  browserLocalPersistence
 } from 'firebase/auth';
 import {
   doc,
@@ -29,7 +31,6 @@ import {
 } from 'firebase/storage';
 
 import { firebaseApp } from '../firebase/config';
-
 
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
@@ -52,7 +53,6 @@ export function AuthProvider({ children }) {
 
     const uid = currentUser.uid;
     const imageRef = ref(storage, `public/users/${uid}/${file.name}`);
-
     await uploadBytes(imageRef, file);
     const imageUrl = await getDownloadURL(imageRef);
 
@@ -62,16 +62,16 @@ export function AuthProvider({ children }) {
     });
 
     await updateProfile(currentUser, { photoURL: imageUrl });
-
     setUserProfile(prev => ({ ...prev, profileImage: imageUrl }));
+
     await currentUser.reload();
     setCurrentUser(auth.currentUser);
-
     return imageUrl;
   };
 
   async function signup(email, password, name, avatarFile = null) {
     try {
+      await setPersistence(auth, browserLocalPersistence);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
       let avatarUrl = null;
@@ -89,7 +89,6 @@ export function AuthProvider({ children }) {
       await setDoc(doc(db, 'users', uid), {
         name,
         email,
-        password, // ❗ Store hashed in production
         role: 'user',
         profileImage: avatarUrl || null,
         isActive: true,
@@ -154,7 +153,6 @@ export function AuthProvider({ children }) {
         updatedAt: new Date().toISOString()
       });
 
-      // Update Firebase Auth display name or photo
       if (data.name || data.profileImage) {
         await updateProfile(currentUser, {
           displayName: data.name || currentUser.displayName,
@@ -165,7 +163,6 @@ export function AuthProvider({ children }) {
       await currentUser.reload();
       const refreshedUser = auth.currentUser;
       setCurrentUser(refreshedUser);
-
       setUserProfile(prev => ({ ...prev, ...data }));
       return true;
     } catch (error) {
@@ -231,6 +228,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("🔥 Auth state changed:", user);
       setCurrentUser(user);
 
       if (user) {
