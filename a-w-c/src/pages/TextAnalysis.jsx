@@ -1,10 +1,10 @@
+// File: src/pages/TextAnalysis.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../contexts/AuthContext';
-import GaugeChart from 'react-gauge-chart';
-import '../styles/TextAnalysis.css';
+import { analyzeWithGPT } from '../API/analyzeWithGPT';
 
 function TextAnalysis() {
   const { currentUser } = useAuth();
@@ -13,14 +13,14 @@ function TextAnalysis() {
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const [results, setResults] = useState(null);
+
   const minTextLength = 100;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (text.length < minTextLength) {
       setError(`Text must be at least ${minTextLength} characters long`);
       return;
@@ -30,73 +30,32 @@ function TextAnalysis() {
       setError('');
       setAnalyzing(true);
 
-      const response = await fetch('http://localhost:4000/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
+      // 🔁 Replaced mocked analysis with real API call
+      const analysisResults = await analyzeWithGPT(text);
 
-      if (!response.ok) throw new Error('API response not OK');
-
-      const data = await response.json();
-      const analysisResults = data.results;
-
-      const defaultedResults = {
-        ...analysisResults,
-        sentenceComplexity: analysisResults.sentenceComplexity || 0,
-      };
-
+      // Save to Firestore
       const submissionRef = await addDoc(collection(db, 'submissions'), {
         userId: currentUser.uid,
         title: title || 'Untitled Analysis',
         text,
         createdAt: serverTimestamp(),
-        aiInfluence: defaultedResults.aiInfluence,
-        score: defaultedResults.score,
-        readabilityScore: defaultedResults.readabilityScore,
-        sentenceComplexity: defaultedResults.sentenceComplexity,
-        suggestions: defaultedResults.suggestions,
-        strengths: defaultedResults.strengths,
-        status: 'complete',
+        aiInfluence: analysisResults.aiInfluence,
+        score: analysisResults.score,
+        readabilityScore: analysisResults.readability.score,
+        suggestions: analysisResults.suggestions,
+        strengths: analysisResults.strengths
       });
 
-      setResults({ id: submissionRef.id, ...defaultedResults });
-      setSuccessMessage('');
+      setResults({
+        id: submissionRef.id,
+        ...analysisResults
+      });
+
     } catch (error) {
-      console.error(error);
       setError('Failed to analyze text. Please try again.');
+      console.error(error);
     } finally {
       setAnalyzing(false);
-    }
-  };
-
-  const handleSaveDraft = async () => {
-    if (text.length < minTextLength) {
-      setError(`Text must be at least ${minTextLength} characters long`);
-      return;
-    }
-
-    try {
-      setSaving(true);
-      await addDoc(collection(db, 'submissions'), {
-        userId: currentUser.uid,
-        title: title || 'Untitled Draft',
-        text,
-        createdAt: serverTimestamp(),
-        status: 'draft',
-      });
-
-      // ✅ Reset fields and show success message
-      setTitle('');
-      setText('');
-      setResults(null);
-      setError('');
-      setSuccessMessage('Draft saved successfully!');
-    } catch (err) {
-      console.error(err);
-      setError('Failed to save draft. Please try again.');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -104,195 +63,186 @@ function TextAnalysis() {
     setTitle('');
     setText('');
     setResults(null);
-    setSuccessMessage('');
   };
 
   return (
-    <div className="text-analysis-container">
-      <h1 className="text-analysis-title">Text Analysis</h1>
+    <div className="max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">Text Analysis</h1>
 
-      {error && <div className="error-banner">{error}</div>}
-      {successMessage && <div className="success-banner">{successMessage}</div>}
+      {error && (
+        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          <i className="fas fa-exclamation-circle mr-2"></i> {error}
+        </div>
+      )}
 
       {!results ? (
-        <div className="text-analysis-form-wrapper">
+        <div className="bg-white rounded-lg shadow-md p-6">
           <form onSubmit={handleSubmit}>
-            <div className="input-group">
-              <label htmlFor="title">Title (Optional)</label>
+            <div className="mb-4">
+              <label className="block text-gray-700 font-medium mb-2" htmlFor="title">
+                Title (Optional)
+              </label>
               <input
                 type="text"
                 id="title"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Give your analysis a title"
               />
             </div>
 
-            <div className="input-group">
-              <label htmlFor="text">
-                Your Text <span className="required">*</span>
+            <div className="mb-6">
+              <label className="block text-gray-700 font-medium mb-2" htmlFor="text">
+                Your Text <span className="text-red-500">*</span>
               </label>
               <textarea
                 id="text"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows="12"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Paste or write your text here..."
                 required
-              />
-              <p className="char-count">
+              ></textarea>
+              <p className="mt-2 text-sm text-gray-500">
                 {text.length} / {minTextLength} characters minimum
               </p>
             </div>
 
-            <div className="form-buttons btn-group-horizontal">
+            <div className="flex items-center justify-between">
               <button
                 type="submit"
                 disabled={analyzing || text.length < minTextLength}
-                className="btn-submit"
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                {analyzing ? 'Analyzing...' : 'Analyze Text'}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                disabled={saving || text.length < minTextLength}
-                className="btn-secondary"
-              >💾
-                <i className="fas fa-save mr-1"></i> {saving ? 'Saving...' : 'Save'}
+                {analyzing ? (
+                  <span className="flex items-center">
+                    <i className="fas fa-spinner fa-spin mr-2"></i> Analyzing...
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <i className="fas fa-search mr-2"></i> Analyze Text
+                  </span>
+                )}
               </button>
 
               <button
                 type="button"
                 onClick={() => setText('')}
-                className="btn-secondary"
+                className="px-4 py-2 text-gray-700 hover:text-red-600"
               >
-                Clear
+                <i className="fas fa-trash-alt mr-2"></i> Clear
               </button>
             </div>
           </form>
         </div>
       ) : (
-        <div className="text-analysis-results">
-          <h2 className="section-title">Analysis Results</h2>
-          <p className="analysis-timestamp">
-            Analyzed on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}
-          </p>
+        <div>
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Analysis Results</h2>
 
-          <div className="results-metrics">
-            <div className="metric">
-              <p>
-                AI Influence
-                <span className="tooltip-wrapper">
-                  <span className="tooltip-icon">?</span>
-                  <span className="tooltip-bubble">
-                    Estimates how much of the text appears AI-generated based on patterns.
-                  </span>
-                </span>
-              </p>
-              <div className="progress-bar">
-                <div
-                  style={{ width: `${results.aiInfluence}%` }}
-                  className={`progress-fill ${
-                    results.aiInfluence > 50
-                      ? 'bg-high'
-                      : results.aiInfluence > 20
-                      ? 'bg-medium'
-                      : 'bg-low'
-                  }`}
-                ></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-gray-50 p-4 rounded-lg text-center">
+                <p className="text-sm text-gray-500 mb-1">AI Influence</p>
+                <div className="relative pt-1">
+                  <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-gray-200">
+                    <div
+                      style={{ width: `${results.aiInfluence}%` }}
+                      className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${
+                        results.aiInfluence > 50
+                          ? 'bg-red-500'
+                          : results.aiInfluence > 20
+                          ? 'bg-yellow-500'
+                          : 'bg-green-500'
+                      }`}
+                    ></div>
+                  </div>
+                  <p className="font-bold text-lg">
+                    {results.aiInfluence}%
+                    <span className="ml-2 text-sm font-normal text-gray-500">
+                      {results.aiInfluence > 50
+                        ? 'High AI influence'
+                        : results.aiInfluence > 20
+                        ? 'Moderate AI influence'
+                        : 'Low AI influence'}
+                    </span>
+                  </p>
+                </div>
               </div>
-              <p className="metric-value">
-                {results.aiInfluence}%{' '}
-                <span className="metric-label">
-                  {results.aiInfluence > 50
-                    ? 'High AI influence'
-                    : results.aiInfluence > 20
-                    ? 'Moderate AI influence'
-                    : 'Low AI influence'}
-                </span>
-              </p>
+
+              <div className="bg-gray-50 p-4 rounded-lg text-center">
+                <p className="text-sm text-gray-500 mb-1">Quality Score</p>
+                <p className="font-bold text-2xl text-blue-600">{results.score.toFixed(1)}/10</p>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg text-center">
+                <p className="text-sm text-gray-500 mb-1">Readability</p>
+                <p className="font-bold text-2xl text-green-600">{results.readability.score}/100</p>
+                <p className="text-sm text-gray-500">{results.readability.level} level</p>
+              </div>
             </div>
 
-            <div className="metric">
-              <p>
-                Quality Score
-                <span className="tooltip-wrapper">
-                  <span className="tooltip-icon">?</span>
-                  <span className="tooltip-bubble">
-                    A score from 0 to 10 reflecting the overall writing quality.
-                  </span>
-                </span>
-              </p>
-              <p className="score-text">{results.score?.toFixed(2)}/10</p>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-medium text-gray-700 mb-3">
+                  <i className="fas fa-exclamation-circle text-yellow-500 mr-2"></i> Improvement Suggestions
+                </h3>
+                <ul className="space-y-2">
+                  <li className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${results.suggestions[0].color}`}></div>
+                    <span>{results.suggestions[0].text}</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${results.suggestions[1].color}`}></div>
+                    <span>{results.suggestions[1].text}</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${results.suggestions[2].color}`}></div>
+                    <span>{results.suggestions[2].text}</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${results.suggestions[3].color}`}></div>
+                    <span>{results.suggestions[3].text}</span>
+                  </li>
+                </ul>
+              </div>
 
-            <div className="metric">
-              <p>
-                Readability
-                <span className="tooltip-wrapper">
-                  <span className="tooltip-icon">?</span>
-                  <span className="tooltip-bubble">
-                    Flesch-based score. Higher values mean easier to read.
-                  </span>
-                </span>
-              </p>
-              <p className="score-text">{results.readabilityScore?.toFixed(1)}/100</p>
-              <p className="metric-label">{results.readabilityLevel} level</p>
-            </div>
-
-            <div className="metric">
-              <p>
-                Sentence Complexity
-                <span className="tooltip-wrapper">
-                  <span className="tooltip-icon">?</span>
-                  <span className="tooltip-bubble">
-                    Average words per sentence. Lower is usually easier to read.
-                  </span>
-                </span>
-              </p>
-              <GaugeChart
-                id="sentence-complexity-meter"
-                nrOfLevels={3}
-                colors={['#2ECC71', '#F1C40F', '#E74C3C']}
-                arcWidth={0.3}
-                percent={Math.min(results.sentenceComplexity / 30, 1)}
-                formatTextValue={() => `${results.sentenceComplexity.toFixed(1)} w/s`}
-                textColor="#000"
-              />
+              <div>
+                <h3 className="font-medium text-gray-700 mb-3">
+                  <i className="fas fa-check-circle text-green-500 mr-2"></i> Writing Strengths
+                </h3>
+                <ul className="space-y-2">
+                  <li className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${results.strengths[0].color}`}></div>
+                    <span>{results.strengths[0].text}</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${results.strengths[1].color}`}></div>
+                    <span>{results.strengths[1].text}</span>
+                  </li>
+                  <li className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${results.strengths[2].color}`}></div>
+                    <span>{results.strengths[2].text}</span>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
 
-          <div className="text-analysis-tips">
-            <div>
-              <h3>Suggestions</h3>
-              <ul>
-                {results.suggestions?.map((s, i) => (
-                  <li key={i}>
-                    <span className="dot yellow"></span> {s}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3>Strengths</h3>
-              <ul>
-                {results.strengths?.map((s, i) => (
-                  <li key={i}>
-                    <span className="dot green"></span> {s}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="results-actions">
-            <button onClick={handleNewAnalysis} className="btn-submit">
-              New Analysis
+          <div className="flex space-x-4">
+            <button
+              onClick={handleNewAnalysis}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <i className="fas fa-plus mr-2"></i> New Analysis
             </button>
-            <button onClick={() => navigate('/progress')} className="btn-secondary">
-              View Progress
+
+            <button
+              onClick={() => navigate('/progress')}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <i className="fas fa-chart-line mr-2"></i> View Progress
             </button>
           </div>
         </div>
