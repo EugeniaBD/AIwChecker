@@ -149,11 +149,12 @@ function Help() {
 setIsLoadingTutorials(true);
 setGptTutorials('');
 
-try {const res = await fetch('http://localhost:4000/help', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ question: tutorialQuery }),
-});
+try {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/help`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: tutorialQuery }),
+  });
 
 
   const data = await res.json();
