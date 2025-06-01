@@ -1,0 +1,25 @@
+# Node modules & build files
+node_modules/
+dist/
+build/
+
+# Environment variables (DO NOT COMMIT SECRETS)
+.env
+a-w-c/.env
+server/.env
+
+# Log files
+*.log
+
+# Python virtual environment
+venv/
+
+# System files
+.DS_Store
+Thumbs.db
+
+
+a-w-c/AIwChecker/
+# Ignore environment files
+.env
+.env.*

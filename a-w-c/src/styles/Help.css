@@ -1,0 +1,50 @@
+/* Help.css */
+.help-container {
+    max-width: 4xl;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .help-title {
+    font-size: 1.875rem; /* 3xl */
+    font-weight: 700;
+    color: #2d3748; /* gray-800 */
+    margin-bottom: 1.5rem; /* mb-6 */
+  }
+  
+  .help-tabs {
+    background-color: #fff;
+    border-radius: 0.5rem; /* rounded-lg */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* shadow-md */
+    overflow: hidden;
+    margin-bottom: 2rem; /* mb-8 */
+  }
+  
+  .help-tabs-button {
+    padding-left: 1.5rem; /* px-6 */
+    padding-right: 1.5rem; /* px-6 */
+    padding-top: 0.75rem; /* py-3 */
+    padding-bottom: 0.75rem; /* py-3 */
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 500; /* font-medium */
+  }
+  
+  .help-tabs-button-active {
+    color: #3182ce; /* blue-600 */
+    border-bottom: 2px solid #3182ce; /* border-b-2 */
+  }
+  
+  .help-tabs-button-inactive {
+    color: #718096; /* gray-500 */
+  }
+  
+  .help-container-section {
+    padding: 1.5rem; /* p-6 */
+  }
+  
+  .help-section-title {
+    font-size: 1.25rem; /* text-xl */
+    font-weight: 600; /* font-semibold */
+    color: #4a5568; /* gray-700 */
+    margin-bottom: 1rem; /* mb-4 */
+  }
