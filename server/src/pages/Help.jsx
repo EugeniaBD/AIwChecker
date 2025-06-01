@@ -149,12 +149,18 @@ function Help() {
 setIsLoadingTutorials(true);
 setGptTutorials('');
 
+
 try {
-  const res = await fetch(`${import.meta.env.VITE_API_URL}/help`, {
+  const defaultPort = import.meta.env.VITE_PORT || '4000';
+  const fallbackUrl = `http://${window.location.hostname}:${defaultPort}`;
+  const apiUrl = import.meta.env.VITE_API_URL || fallbackUrl;
+
+  const res = await fetch(`${apiUrl}/help`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question: tutorialQuery }),
   });
+
 
 
   const data = await res.json();

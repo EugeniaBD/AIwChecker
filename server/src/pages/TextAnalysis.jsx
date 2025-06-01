@@ -30,7 +30,9 @@ function TextAnalysis() {
       setError('');
       setAnalyzing(true);
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      const defaultPort = import.meta.env.VITE_PORT || '4000';
+      const fallbackUrl = `http://${window.location.hostname}:${defaultPort}`;
+      const apiUrl = import.meta.env.VITE_API_URL || fallbackUrl;
 
       const response = await fetch(`${apiUrl}/analyze`, {
         method: 'POST',
