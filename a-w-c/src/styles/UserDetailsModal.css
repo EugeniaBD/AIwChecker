@@ -1,0 +1,130 @@
+/* src/styles/UserDetailsModal.css */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-container {
+  background-color: #fff;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 28rem;
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.modal-close-button {
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.modal-close-button:hover {
+  color: #374151;
+}
+
+.modal-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background-color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b5563;
+  margin-right: 0.75rem;
+}
+
+.modal-user-name {
+  font-weight: 500;
+}
+
+.modal-user-email {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.modal-section {
+  border-top: 1px solid #e5e7eb;
+  padding: 1rem 0;
+}
+
+.modal-field-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.modal-select {
+  margin-top: 0.25rem;
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+}
+
+.modal-status-button {
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.modal-status-active {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.modal-status-active:hover {
+  background-color: #a7f3d0;
+}
+
+.modal-status-inactive {
+  background-color: #fecaca;
+  color: #991b1b;
+}
+
+.modal-status-inactive:hover {
+  background-color: #fca5a5;
+}
+
+.modal-footer {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.modal-delete-button {
+  padding: 0.5rem 1rem;
+  background-color: #dc2626;
+  color: white;
+  border-radius: 0.375rem;
+}
+
+.modal-delete-button:hover {
+  background-color: #b91c1c;
+}
+
+.modal-close-footer-button {
+  padding: 0.5rem 1rem;
+  background-color: #e5e7eb;
+  color: #1f2937;
+  border-radius: 0.375rem;
+}
+
+.modal-close-footer-button:hover {
+  background-color: #d1d5db;
+}

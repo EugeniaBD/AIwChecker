@@ -1,38 +1,39 @@
 // src/pages/admin/modals/UserDetailsModal.jsx
 import React from "react";
 import { FaTimes } from "react-icons/fa";
+import "../../../styles/UserDetailsModal.css";
 
 function UserDetailsModal({ user, isOpen, onClose, onToggleStatus, onRoleChange, onDelete }) {
   if (!user || !isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">User Details</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+    <div className="modal-overlay">
+      <div className="modal-container">
+        <div className="modal-header">
+          <h2>User Details</h2>
+          <button onClick={onClose} className="modal-close-button">
             <FaTimes />
           </button>
         </div>
 
-        <div className="mb-4">
-          <div className="flex items-center mb-2">
-            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 mr-3">
+        <div className="modal-user-info">
+          <div className="modal-user-row">
+            <div className="modal-avatar">
               {user.name ? user.name.charAt(0).toUpperCase() : "U"}
             </div>
             <div>
-              <p className="font-medium">{user.name || "No Name"}</p>
-              <p className="text-sm text-gray-600">{user.email}</p>
+              <p className="modal-user-name">{user.name || "No Name"}</p>
+              <p className="modal-user-email">{user.email}</p>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-200 py-4">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="modal-section">
+          <div className="modal-grid">
             <div>
-              <p className="text-sm text-gray-500">Role</p>
+              <p className="modal-field-label">Role</p>
               <select
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                className="modal-select"
                 value={user.role || "user"}
                 onChange={(e) => onRoleChange(user.id, e.target.value)}
               >
@@ -41,13 +42,11 @@ function UserDetailsModal({ user, isOpen, onClose, onToggleStatus, onRoleChange,
               </select>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Status</p>
-              <div className="mt-1">
+              <p className="modal-field-label">Status</p>
+              <div className="modal-status-wrapper">
                 <button
-                  className={`px-3 py-2 rounded-md w-full ${
-                    user.isActive
-                      ? "bg-green-100 text-green-800 hover:bg-green-200"
-                      : "bg-red-100 text-red-800 hover:bg-red-200"
+                  className={`modal-status-button ${
+                    user.isActive ? "modal-status-active" : "modal-status-inactive"
                   }`}
                   onClick={() => onToggleStatus(user.id, user.isActive)}
                 >
@@ -58,8 +57,8 @@ function UserDetailsModal({ user, isOpen, onClose, onToggleStatus, onRoleChange,
           </div>
         </div>
 
-        <div className="border-t border-gray-200 pt-4">
-          <p className="text-sm text-gray-500 mb-2">Joined</p>
+        <div className="modal-section">
+          <p className="modal-field-label">Joined</p>
           <p>
             {user.createdAt?.toDate?.().toLocaleDateString() ||
               (typeof user.createdAt === "string"
@@ -68,15 +67,15 @@ function UserDetailsModal({ user, isOpen, onClose, onToggleStatus, onRoleChange,
           </p>
         </div>
 
-        <div className="mt-6 flex justify-end space-x-3">
+        <div className="modal-footer">
           <button
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            className="modal-delete-button"
             onClick={() => onDelete(user.id)}
           >
             Delete User
           </button>
           <button
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+            className="modal-close-footer-button"
             onClick={onClose}
           >
             Close

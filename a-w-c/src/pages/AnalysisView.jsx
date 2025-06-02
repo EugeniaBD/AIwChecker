@@ -295,7 +295,15 @@ useEffect(() => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <p className="text-sm text-gray-500 mb-1">AI Influence</p>
+            <p className="text-sm text-gray-500 mb-1">
+              AI Influence
+              <span className="tooltip-container">
+                <span className="tooltip-icon">?</span>
+                <span className="tooltip-box">
+                  Indicates the estimated portion of your text that may have been influenced by AI-generated suggestions.
+                </span>
+              </span>
+            </p>
             <div className="relative pt-1">
               <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-gray-200">
                 <div
@@ -323,12 +331,30 @@ useEffect(() => {
           </div>
 
           <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <p className="text-sm text-gray-500 mb-1">Quality Score</p>
+                    <p className="text-sm text-gray-500 mb-1">
+          Quality Score
+          <span className="tooltip-container">
+            <span className="tooltip-icon">?</span>
+            <span className="tooltip-box">
+              Reflects overall writing quality based on coherence, vocabulary, and structure. Scored out of 10.
+            </span>
+          </span>
+        </p>
+
             <p className="font-bold text-2xl text-blue-600">{formatQualityScore(submission.score)}/10</p>
           </div>
 
           <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <p className="text-sm text-gray-500 mb-1">Readability</p>
+            <p className="text-sm text-gray-500 mb-1">
+              Readability
+              <span className="tooltip-container">
+                <span className="tooltip-icon">?</span>
+                <span className="tooltip-box">
+                  Represents how easy your text is to read. Higher scores mean better readability.
+                </span>
+              </span>
+            </p>
+
             {/* ✅ Gauge chart added here */}
             <GaugeChart
               id="readability-meter"
